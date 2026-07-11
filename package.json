@@ -1,0 +1,13 @@
+{
+  "name": "mypuzzles",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "express": "^4.22.2",
+    "stockfish": "^18.0.8"
+  }
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyPuzzles — train on your own games</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <header class="header">
+      <div class="header-inner">
+        <div>
+          <h1>MyPuzzles</h1>
+          <p>Tactics generated from your own games</p>
+        </div>
+        <div class="stats-bar" id="stats-bar">
+          <span class="stat"><span class="stat-num" id="stat-solved">0</span> solved</span>
+          <span class="stat"><span class="stat-num" id="stat-failed">0</span> missed</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <!-- Input -->
+      <div class="card input-card">
+        <div class="input-row">
+          <div class="input-group">
+            <label for="platform">Platform</label>
+            <select id="platform">
+              <option value="lichess">Lichess</option>
+              <option value="chesscom">Chess.com</option>
+            </select>
+          </div>
+          <div class="input-group username-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="your username" autocomplete="off" spellcheck="false">
+          </div>
+          <button id="generate-btn" class="btn-primary">Generate Puzzles</button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="error-card" class="card error-card hidden">
+        <span class="error-icon">&#9888;</span>
+        <span id="error-msg"></span>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading" class="card loading-card hidden">
+        <div class="spinner"></div>
+        <p id="loading-title">Loading…</p>
+        <p class="hint" id="loading-sub"></p>
+      </div>
+
+      <!-- Puzzle view -->
+      <div id="puzzle-view" class="hidden">
+
+        <div class="puzzle-meta card">
+          <div class="meta-left">
+            <span class="chip chip-tactic" id="theme-chip">Tactic</span>
+            <span class="chip chip-retry hidden" id="retry-chip">Retry</span>
+            <span class="chip chip-found hidden" id="found-chip" title="You played this move in the actual game">Found in game</span>
+          </div>
+          <div class="meta-right">
+            <span class="meta-info">
+              <span id="game-date"></span> &bull;
+              <span id="game-opp"></span>
+              <span id="game-color" class="dim"></span>
+            </span>
+            <a id="game-link" class="game-link" href="#" target="_blank" rel="noopener">View game &#8599;</a>
+          </div>
+        </div>
+
+        <div class="puzzle-body">
+          <div class="board-wrap">
+            <div id="board"></div>
+          </div>
+
+          <div class="side">
+            <div class="status-box">
+              <div id="status-icon" class="status-icon">&#9654;</div>
+              <div>
+                <div id="status-title" class="status-title">Your move</div>
+                <div id="status-sub" class="status-sub"></div>
+              </div>
+            </div>
+
+            <div id="solution-box" class="solution-box hidden">
+              <div class="solution-label">Best line</div>
+              <div id="solution-moves" class="solution-moves"></div>
+            </div>
+
+            <div class="btn-row">
+              <button id="back-btn" class="btn-secondary hidden">&#8592; Back</button>
+              <button id="giveup-btn" class="btn-secondary">Show solution</button>
+              <button id="next-btn" class="btn-primary" disabled>Next &#8594;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- End screen -->
+      <div id="end-screen" class="card end-card hidden">
+        <div class="end-emoji">&#127942;</div>
+        <h2>That's everything!</h2>
+        <p id="end-summary"></p>
+        <div id="end-themes" class="end-themes"></div>
+        <p class="hint">Play more games on Lichess or Chess.com, then come back for fresh puzzles.</p>
+        <button id="restart-btn" class="btn-primary">Start over</button>
+      </div>
+
+    </main>
+
+    <footer class="footer">
+      Runs entirely in your browser &mdash; games via Lichess &amp; Chess.com public APIs, analysis by Stockfish 18 (WASM).
+      Piece set by Colin M.L. Burnett (CC BY-SA 3.0).<br>
+      Built by <a class="footer-link" href="https://github.com/sambindas" target="_blank" rel="noopener">github.com/sambindas</a>
+    </footer>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
