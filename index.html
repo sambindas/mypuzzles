@@ -89,8 +89,16 @@
             </div>
 
             <div id="solution-box" class="solution-box hidden">
-              <div class="solution-label">Best line</div>
+              <div class="solution-top">
+                <div class="solution-label">Best line</div>
+                <span id="replay-pos" class="replay-pos"></span>
+              </div>
               <div id="solution-moves" class="solution-moves"></div>
+              <div id="replay-controls" class="replay-controls hidden">
+                <button id="replay-back" class="btn-replay" disabled>&#8592;</button>
+                <span id="replay-label" class="replay-label">Start</span>
+                <button id="replay-fwd" class="btn-replay">&#8594;</button>
+              </div>
             </div>
 
             <div class="btn-row">

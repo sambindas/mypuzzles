@@ -14,24 +14,51 @@
 const pieceSrc = p => `pieces/${p === p.toUpperCase() ? 'w' : 'b'}${p.toUpperCase()}.svg`;
 const FILES = 'abcdefgh';
 
-/* Tiny WebAudio move/capture sounds \u2014 no asset files needed. */
+/* WebAudio sounds \u2014 no asset files needed. */
 let audioCtx = null;
-function moveSound(capture) {
+function getCtx() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const t = audioCtx.currentTime;
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = 'triangle';
-    o.frequency.setValueAtTime(capture ? 190 : 300, t);
-    o.frequency.exponentialRampToValueAtTime(capture ? 90 : 150, t + 0.08);
-    g.gain.setValueAtTime(0.001, t);
-    g.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(t); o.stop(t + 0.14);
-  } catch { /* audio unavailable \u2014 stay silent */ }
+    return audioCtx;
+  } catch { return null; }
+}
+
+/** Short mouse-like click on every square press. */
+function clickSound() {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1200, t);
+  osc.frequency.exponentialRampToValueAtTime(400, t + 0.015);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.025);
+}
+
+/** Mouse-click style tick on move/capture (the "release" of the click). */
+function moveSound(capture) {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const dur = 0.005;
+  const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++)
+    data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = capture ? 1800 : 3200;   // captures click a bit deeper
+  const g = ctx.createGain();
+  g.gain.value = capture ? 0.9 : 0.7;
+  src.connect(filter); filter.connect(g); g.connect(ctx.destination);
+  src.start(t);
 }
 
 export class Board {
@@ -83,10 +110,13 @@ export class Board {
     }
 
     // castling: move the rook too
+    let rookFrom = null, rookTo = null;
     if (piece.toUpperCase() === 'K' && Math.abs(FILES.indexOf(from[0]) - FILES.indexOf(to[0])) === 2) {
       const rank = from[1];
-      if (to[0] === 'g') { this.pos['f' + rank] = this.pos['h' + rank]; delete this.pos['h' + rank]; }
-      else               { this.pos['d' + rank] = this.pos['a' + rank]; delete this.pos['a' + rank]; }
+      if (to[0] === 'g') { rookFrom = 'h' + rank; rookTo = 'f' + rank; }
+      else               { rookFrom = 'a' + rank; rookTo = 'd' + rank; }
+      this.pos[rookTo] = this.pos[rookFrom];
+      delete this.pos[rookFrom];
     }
 
     this.pos[to] = piece;
@@ -94,7 +124,32 @@ export class Board {
     this.lastMove = [from, to];
     this.selected = null;
     this.render();
+
+    /* glide the piece in, unless it was just dropped there by hand */
+    const dropped = this._dropped; this._dropped = false;
+    if (!dropped) {
+      this._animateMove(from, to);
+      if (rookFrom) this._animateMove(rookFrom, rookTo);
+    }
     moveSound(isCapture);
+  }
+
+  /** FLIP animation: piece is already rendered on `to`; slide it from `from`. */
+  _animateMove(from, to) {
+    const fromCell = this.el.querySelector(`[data-sq="${from}"]`);
+    const toCell = this.el.querySelector(`[data-sq="${to}"]`);
+    const img = toCell && toCell.querySelector('.piece');
+    if (!fromCell || !img) return;
+    const dx = fromCell.offsetLeft - toCell.offsetLeft;
+    const dy = fromCell.offsetTop - toCell.offsetTop;
+    if (!dx && !dy) return;
+    img.style.transition = 'none';
+    img.style.transform = `translate(${dx}px, ${dy}px)`;
+    img.style.zIndex = '3';
+    void img.offsetWidth;                   // commit the start position
+    img.style.transition = 'transform 0.16s ease';
+    img.style.transform = '';
+    setTimeout(() => { img.style.transition = ''; img.style.zIndex = ''; }, 220);
   }
 
   setLegalMoves(list) { this.legalMoves = list; }
@@ -230,6 +285,7 @@ export class Board {
   }
 
   _showPromoPicker(from, to) {
+    this._dropped = false;   // render() snaps the pawn back, so the promo should glide
     this.render();
     const overlay = document.createElement('div');
     overlay.className = 'promo-overlay';
@@ -263,6 +319,7 @@ export class Board {
     const cell = e.target.closest ? e.target.closest('.sq') : null;
     if (!cell) return;
     const sq = cell.dataset.sq;
+    clickSound();
 
     /* right button always starts an arrow drag (works even when locked) */
     if (e.pointerType === 'mouse' && e.button === 2) {
@@ -371,6 +428,7 @@ export class Board {
         const to = this._squareFromEvent(e);
         if (to && to !== d.from) {
           this.selected = null;
+          this._dropped = true;           // piece is already at the target: no glide
           this._tryMove(d.from, to);
           return;
         }

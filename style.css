@@ -173,6 +173,7 @@ select:focus, input[type=text]:focus { border-color: var(--accent); }
 .sq.wrong    { box-shadow: inset 0 0 0 100vmax rgba(226, 91, 91, 0.5); }
 
 .piece {
+  position: relative;   /* lets a gliding piece layer above its neighbors */
   width: 92%; height: 92%;
   pointer-events: none;
   transition: transform 0.08s;
@@ -244,7 +245,9 @@ select:focus, input[type=text]:focus { border-color: var(--accent); }
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   padding: 13px 16px;
 }
-.solution-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 8px; }
+.solution-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.solution-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.replay-pos { font-size: 0.72rem; color: var(--muted); }
 .solution-moves { line-height: 2; }
 .mv-badge {
   display: inline-block; border: 1px solid var(--border);
@@ -256,6 +259,20 @@ select:focus, input[type=text]:focus { border-color: var(--accent); }
 .mv-badge.mv-white { background: #fff; color: var(--text); }
 .mv-badge.mv-black { background: #3a352c; color: #f3ecdd; border-color: #3a352c; }
 .mv-badge.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.replay-controls {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.btn-replay {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text); padding: 4px 10px; font-size: 0.83rem; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.btn-replay:hover:not(:disabled) { border-color: var(--accent); }
+.btn-replay:disabled { opacity: 0.35; cursor: not-allowed; }
+.replay-label { font-size: 0.78rem; color: var(--muted); flex: 1; text-align: center; }
 
 .btn-row { display: flex; gap: 10px; }
 .btn-row .btn-primary, .btn-row .btn-secondary { flex: 1; }

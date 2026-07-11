@@ -68,6 +68,8 @@ function newSession(platform, username) {
     stats: { solved: 0, failed: 0, byTheme: {} },
     current: null,        // current puzzle
     play: null,           // current play state
+    replaySnapshots: null,
+    replayIdx: 0,
   };
 }
 
@@ -84,11 +86,26 @@ $('username').addEventListener('keydown', e => e.key === 'Enter' && start());
 $('next-btn').addEventListener('click', nextPuzzle);
 $('giveup-btn').addEventListener('click', giveUp);
 $('back-btn').addEventListener('click', undoWrongMove);
+$('replay-back').addEventListener('click', () => stepReplay(-1));
+$('replay-fwd').addEventListener('click', () => stepReplay(1));
 document.addEventListener('keydown', e => {
-  if ((e.key !== 'ArrowLeft' && e.key !== 'Left') || e.target.tagName === 'INPUT') return;
-  if ($('back-btn').classList.contains('hidden')) return;
-  e.preventDefault();
-  undoWrongMove();
+  if (e.target.tagName === 'INPUT') return;
+  if ((e.key === 'ArrowLeft' || e.key === 'Left')) {
+    if (!$('back-btn').classList.contains('hidden')) {
+      e.preventDefault();
+      return undoWrongMove();
+    }
+    if (!$('replay-controls').classList.contains('hidden') && !$('replay-back').disabled) {
+      e.preventDefault();
+      return stepReplay(-1);
+    }
+  }
+  if ((e.key === 'ArrowRight' || e.key === 'Right')) {
+    if (!$('replay-controls').classList.contains('hidden') && !$('replay-fwd').disabled) {
+      e.preventDefault();
+      return stepReplay(1);
+    }
+  }
 });
 $('restart-btn').addEventListener('click', () => { location.reload(); });
 
@@ -263,8 +280,11 @@ function loadPuzzle(puzzle) {
   $('game-link').href = puzzle.game.url;
 
   hide($('solution-box'));
+  hide($('replay-controls'));
   hide($('back-btn'));
   $('next-btn').disabled = true;
+  s.replaySnapshots = null;
+  s.replayIdx = 0;
 
   /* board: replay the opponent's last move first, so you see what just happened */
   const toPlay = puzzle.userColor === 'w' ? 'White to play' : 'Black to play';
@@ -517,10 +537,15 @@ function showSolutionLine(puzzle) {
 
   /* replay the line once to get the position after each half-move */
   const chess = new Chess(puzzle.fen);
-  const positions = puzzle.line.map(uci => {
+  const snapshots = [{ fen: puzzle.fen, lastMove: null }];
+  puzzle.line.forEach(uci => {
     safeMove(chess, { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
-    return chess.fen();
+    snapshots.push({ fen: chess.fen(), lastMove: [uci.slice(0, 2), uci.slice(2, 4)] });
   });
+
+  const s = session;
+  s.replaySnapshots = snapshots;
+  s.replayIdx = snapshots.length - 1;
 
   const startSide = puzzle.fen.split(' ')[1];
   let moveNo = parseInt(puzzle.fen.split(' ')[5], 10) || 1;
@@ -536,17 +561,48 @@ function showSolutionLine(puzzle) {
     b.className = 'mv-badge ' + (side === 'w' ? 'mv-white' : 'mv-black');
     b.textContent = label;
     b.title = 'Show this position on the board';
+    b.dataset.idx = i + 1;
     b.addEventListener('click', () => {
-      const uci = puzzle.line[i];
-      board.setPosition(positions[i], {
-        orientation: puzzle.userColor,
-        lastMove: [uci.slice(0, 2), uci.slice(2, 4)],
-      });
-      el.querySelectorAll('.mv-badge').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+      s.replayIdx = parseInt(b.dataset.idx);
+      renderReplay(s);
     });
     el.appendChild(b);
   });
+
+  show($('replay-controls'));
+  renderReplay(s);
+}
+
+function renderReplay(s) {
+  const shots = s.replaySnapshots;
+  const idx = s.replayIdx;
+  const shot = shots[idx];
+  if (!shot) return;
+
+  board.setPosition(shot.fen, {
+    orientation: s.current.userColor,
+    lastMove: shot.lastMove,
+  });
+
+  const total = shots.length - 1;
+  $('replay-pos').textContent = `${idx} / ${total}`;
+  $('replay-label').textContent = idx === 0
+    ? 'Puzzle start'
+    : (idx % 2 === 1 ? 'Your move' : 'Opponent reply');
+  $('replay-back').disabled = idx <= 0;
+  $('replay-fwd').disabled  = idx >= total;
+
+  const badges = $('solution-moves').querySelectorAll('.mv-badge');
+  badges.forEach((b, i) => b.classList.toggle('active', i + 1 === idx));
+}
+
+function stepReplay(dir) {
+  const s = session;
+  if (!s || !s.replaySnapshots) return;
+  const next = s.replayIdx + dir;
+  if (next < 0 || next >= s.replaySnapshots.length) return;
+  s.replayIdx = next;
+  renderReplay(s);
 }
 
 function setStatus(kind, title, sub) {
