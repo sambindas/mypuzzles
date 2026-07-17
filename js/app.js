@@ -334,7 +334,11 @@ async function onUserMove(uci) {
   const r = await engine.analyze(probe.fen(), 12);
   const userEval = r.score === null ? -Infinity : -r.score;  // flip: opponent POV → user POV
 
-  if (current.theme !== 'mate' && userEval >= Math.max(200, (current.score ?? 0) - 120)) {
+  /* a true alternative must be nearly as strong as the solution itself —
+     puzzle positions are already winning, so a loose bar (e.g. "still +2")
+     would accept almost any safe move and falsely mark the puzzle solved */
+  const need = Math.max(250, (current.score ?? 0) - 60);
+  if (current.theme !== 'mate' && userEval >= need) {
     board.setInteractive(true);
     return acceptMove(uci, true);
   }
