@@ -334,11 +334,14 @@ async function onUserMove(uci) {
   const r = await engine.analyze(probe.fen(), 12);
   const userEval = r.score === null ? -Infinity : -r.score;  // flip: opponent POV → user POV
 
-  /* a true alternative must be nearly as strong as the solution itself —
-     puzzle positions are already winning, so a loose bar (e.g. "still +2")
-     would accept almost any safe move and falsely mark the puzzle solved */
+  /* Alternatives are only accepted on the FIRST move, where the puzzle's
+     score is a valid comparison and a true equivalent must be nearly as
+     strong as the solution. On later moves the winning material is already
+     banked, so every safe move keeps a high eval — comparing against the
+     starting score there falsely auto-completed the puzzle as "solved".
+     After move one you must follow the line (checkmate excepted, above). */
   const need = Math.max(250, (current.score ?? 0) - 60);
-  if (current.theme !== 'mate' && userEval >= need) {
+  if (current.theme !== 'mate' && play.step === 0 && userEval >= need) {
     board.setInteractive(true);
     return acceptMove(uci, true);
   }
